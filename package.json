@@ -1,0 +1,10 @@
+{
+  "name": "keystone-auth-users",
+  "version": "1.0.0",
+  "description": "a keystone project showing users and auth",
+  "main": "index.js",
+  "repository": "https://github.com/kharioki/keystone-auth-users",
+  "author": "kharioki",
+  "license": "MIT",
+  "private": false
+}
