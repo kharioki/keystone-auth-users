@@ -1,33 +1,55 @@
 const { Keystone } = require('@keystonejs/keystone');
 const { PasswordAuthStrategy } = require('@keystonejs/auth-password');
-const { Text, Checkbox, Password } = require('@keystonejs/fields');
 const { GraphQLApp } = require('@keystonejs/app-graphql');
 const { AdminUIApp } = require('@keystonejs/app-admin-ui');
 const { MongooseAdapter } = require('@keystonejs/adapter-mongoose');
 
 const { createItems } = require('@keystonejs/server-side-graphql-client');
+const { Text, Checkbox, Password, Relationship } = require('@keystonejs/fields');
 
 const keystone = new Keystone({
   adapter: new MongooseAdapter({ mongoUri: 'mongodb://localhost/keystone-auth' }),
   onConnect: async keystone => {
     // Reset the database each time for this example
     await keystone.adapter.dropDatabase();
-    await createItems({
+
+    // 1. Insert the user list first to obtain the user IDs
+    const users = await createItems({
       keystone,
       listKey: 'User',
       items: [
         {
           data: {
-            name: 'John Duck',
-            email: 'john@duck.com',
-            password: 'dolphins',
+            name: 'Tony Stark',
+            email: 'tony@stark.com',
+            password: 'avengers',
           },
         },
         {
           data: {
-            name: 'Barry',
-            email: 'bartduisters@bartduisters.com',
-            password: 'dolphins',
+            name: 'Bobo',
+            email: 'bobo@stark.com',
+            password: 'wambuiii',
+          },
+        },
+      ],
+      returnFields: 'id, name',
+    });
+
+    // 2. Insert `Post` data, with the required relationships, via `connect` nested mutation.
+    await createItems({
+      keystone,
+      listKey: 'Post',
+      items: [
+        {
+          data: {
+            title: 'Hello Kajiado',
+            author: {
+              // Extracting the id from `users` array
+              connect: {
+                id: users.find(user => user.name === 'Tony Stark').id,
+              },
+            },
           },
         },
       ],
@@ -41,6 +63,13 @@ keystone.createList('User', {
     email: { type: Text, isUnique: true },
     isAdmin: { type: Checkbox },
     password: { type: Password },
+  },
+});
+
+keystone.createList('Post', {
+  fields: {
+    title: { type: Text },
+    author: { type: Relationship, ref: 'User', many: false },
   },
 });
 
