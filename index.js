@@ -13,43 +13,43 @@ const keystone = new Keystone({
     // Reset the database each time for this example
     await keystone.adapter.dropDatabase();
 
-    // 1. Insert the user list first to obtain the user IDs
-    const users = await createItems({
+    // 1. Create posts first as we need generated ids to establish relationship with user items.
+    const posts = await createItems({
+      keystone,
+      listKey: 'Post',
+      items: [
+        { data: { title: 'Hello Kajiado' } },
+        { data: { title: 'Talking about React' } },
+        { data: { title: 'React is the Best' } },
+        { data: { title: 'Kajiado Rocks' } },
+      ],
+      returnFields: 'id, title',
+    });
+
+    // 2. Insert User data with required relationship via nested mutations. `connect` requires an array of post item ids.
+    await createItems({
       keystone,
       listKey: 'User',
       items: [
         {
           data: {
-            name: 'Tony Stark',
+            name: 'Tony Stark Duck',
             email: 'tony@stark.com',
             password: 'avengers',
+            posts: {
+              // Filtering list of items where title contains the word `React`
+              connect: posts
+                .filter(post => /\bReact\b/i.test(post.title))
+                .map(post => ({ id: post.id })),
+            },
           },
         },
         {
           data: {
             name: 'Bobo',
             email: 'bobo@stark.com',
-            password: 'wambuiii',
-          },
-        },
-      ],
-      returnFields: 'id, name',
-    });
-
-    // 2. Insert `Post` data, with the required relationships, via `connect` nested mutation.
-    await createItems({
-      keystone,
-      listKey: 'Post',
-      items: [
-        {
-          data: {
-            title: 'Hello Kajiado',
-            author: {
-              // Extracting the id from `users` array
-              connect: {
-                id: users.find(user => user.name === 'Tony Stark').id,
-              },
-            },
+            password: 'dolphins',
+            isAdmin: true,
           },
         },
       ],
@@ -63,13 +63,14 @@ keystone.createList('User', {
     email: { type: Text, isUnique: true },
     isAdmin: { type: Checkbox },
     password: { type: Password },
+    posts: { type: Relationship, ref: 'Post.author', many: true },
   },
 });
 
 keystone.createList('Post', {
   fields: {
     title: { type: Text },
-    author: { type: Relationship, ref: 'User', many: false },
+    author: { type: Relationship, ref: 'User.posts', many: false },
   },
 });
 
